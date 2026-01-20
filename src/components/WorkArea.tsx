@@ -1,53 +1,41 @@
 "use client";
 
-import { RoadmapView } from "./RoadmapView";
-import { DiagramView } from "./DiagramView";
 import { useStore } from "@/store/useStore";
-import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, LayoutList, Network } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, ArrowRight, LayoutList, Network, Clock, Trash2, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-
-// --- ВРЕМЕННЫЕ МОКОВЫЕ ДАННЫЕ (ЧТОБЫ ТЕСТИТЬ БЕЗ API) ---
-const MOCK_RESULT = {
-  topic: "Как работает DNS",
-  roadmap: [
-    { step: 1, title: "Локальный кэш", description: "Браузер проверяет свой кэш.", resources: ["browser dns cache"] },
-    { step: 2, title: "Hosts файл", description: "ОС проверяет файл hosts.", resources: ["hosts file"] },
-    { step: 3, title: "DNS Резолвер", description: "Запрос уходит к провайдеру.", resources: ["ISP DNS"] },
-  ],
-  mermaid_code: `graph TD; A[User] --> B{Cache?}; B -- Yes --> C[IP Found]; B -- No --> D[Resolver];`
-};
+import { RoadmapView } from "./RoadmapView";
+import { DiagramView } from "./DiagramView";
 
 export const WorkArea = () => {
   const { 
     isLoading, setIsLoading, 
     generatedData, setGeneratedData,
-    viewMode, setViewMode 
+    viewMode, setViewMode,
+    history, addToHistory, removeFromHistory, clearHistory
   } = useStore();
   
   const [input, setInput] = useState("");
 
-const handleGenerate = async () => {
+  const handleGenerate = async () => {
     if (!input.trim()) return;
 
     setIsLoading(true);
     setGeneratedData(null); 
     
     try {
-      // Реальный запрос к нашему API
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: input }),
       });
 
-      if (!response.ok) {
-        throw new Error("Ошибка генерации");
-      }
+      if (!response.ok) throw new Error("Ошибка генерации");
 
       const data = await response.json();
-      setGeneratedData(data); // Сохраняем реальные данные от ИИ!
+      setGeneratedData(data);
+      addToHistory(data); // <--- СОХРАНЯЕМ В ИСТОРИЮ
       
     } catch (error) {
       console.error(error);
@@ -57,14 +45,17 @@ const handleGenerate = async () => {
     }
   };
 
+  // Функция восстановления из истории
+  const handleRestore = (item: typeof history[0]) => {
+    setGeneratedData(item);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
       
       {/* 1. Блок ввода */}
-      <motion.div 
-        layout
-        className="relative flex items-center w-full"
-      >
+      <motion.div layout className="relative flex flex-col gap-4 w-full">
         <div className="relative w-full group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
           <div className="relative flex items-center bg-background rounded-xl p-2 border border-border shadow-2xl">
@@ -95,79 +86,136 @@ const handleGenerate = async () => {
             </button>
           </div>
         </div>
+
+        {/* --- БЛОК ИСТОРИИ (Показываем, если нет генерации или просто снизу) --- */}
+        {!generatedData && history.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8"
+          >
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                <Clock size={16} />
+                Недавние запросы
+              </h3>
+              <button 
+                onClick={clearHistory}
+                className="text-xs text-red-500 hover:text-red-600 transition-colors flex items-center gap-1"
+              >
+                <Trash2 size={12} /> Очистить
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {history.map((item, i) => (
+                <motion.div
+                  key={item.topic + i}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/50 cursor-pointer transition-all"
+                  onClick={() => handleRestore(item)}
+                >
+                  <span className="font-medium truncate pr-2">{item.topic}</span>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); removeFromHistory(item.topic); }}
+                      className="p-1 hover:bg-red-500/10 hover:text-red-500 rounded text-muted-foreground"
+                      title="Удалить"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <RotateCcw size={14} className="text-primary" />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
 
-      {/* 2. Переключатель вкладок (Появляется только если есть данные) */}
-      {generatedData && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-6"
-        >
-          {/* Заголовок темы */}
-          <h2 className="text-3xl font-bold text-center">
-            Разбор темы: <span className="text-primary">{generatedData.topic}</span>
-          </h2>
+      {/* 2. Область результатов */}
+      <AnimatePresence mode="wait">
+        {generatedData && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex flex-col gap-6"
+          >
+            {/* Заголовок и кнопка "Назад" (чтобы вернуться к истории) */}
+            <div className="relative text-center">
+              <button 
+                onClick={() => setGeneratedData(null)}
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-colors md:flex hidden"
+                title="Вернуться к поиску"
+              >
+                <ArrowRight className="rotate-180" size={20} />
+              </button>
+              
+              <h2 className="text-3xl font-bold">
+                Разбор темы: <span className="text-primary">{generatedData.topic}</span>
+              </h2>
+            </div>
 
-          {/* Красивый Тумблер (Segmented Control) */}
-          <div className="flex p-1 bg-muted rounded-xl self-center relative">
-            {/* Кнопка Дорожная карта */}
-            <button
-              onClick={() => setViewMode('roadmap')}
-              className={cn(
-                "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
-                viewMode === 'roadmap' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
+            {/* Тумблер */}
+            <div className="flex p-1 bg-muted rounded-xl self-center relative">
+              <button
+                onClick={() => setViewMode('roadmap')}
+                className={cn(
+                  "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
+                  viewMode === 'roadmap' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutList size={18} />
+                <span>Дорожная карта</span>
+                {viewMode === 'roadmap' && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-background rounded-lg shadow-sm"
+                    style={{ zIndex: -1 }}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </button>
+
+              <button
+                onClick={() => setViewMode('diagram')}
+                className={cn(
+                  "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
+                  viewMode === 'diagram' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Network size={18} />
+                <span>Схема</span>
+                {viewMode === 'diagram' && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-background rounded-lg shadow-sm"
+                    style={{ zIndex: -1 }}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+              </button>
+            </div>
+
+            {/* Контент */}
+            <motion.div
+              key={viewMode}
+              initial={{ opacity: 0, x: viewMode === 'roadmap' ? -20 : 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-card rounded-2xl p-1 sm:p-4 border border-border"
             >
-              <LayoutList size={18} />
-              <span>Дорожная карта</span>
-              {viewMode === 'roadmap' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-background rounded-lg shadow-sm"
-                  style={{ zIndex: -1 }}
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                />
+              {viewMode === 'roadmap' ? (
+                <RoadmapView steps={generatedData.roadmap} />
+              ) : (
+                <DiagramView code={generatedData.mermaid_code} />
               )}
-            </button>
-
-            {/* Кнопка Схема */}
-            <button
-              onClick={() => setViewMode('diagram')}
-              className={cn(
-                "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
-                viewMode === 'diagram' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Network size={18} />
-              <span>Схема</span>
-              {viewMode === 'diagram' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-background rounded-lg shadow-sm"
-                  style={{ zIndex: -1 }}
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                />
-              )}
-            </button>
-          </div>
-
-        {/* 3. Область контента */}
-        <motion.div
-        key={viewMode} // Ключ заставляет React пересоздавать анимацию при смене таба
-        initial={{ opacity: 0, x: viewMode === 'roadmap' ? -20 : 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
-        className="bg-card rounded-2xl p-1 sm:p-4"
-        >
-        {viewMode === 'roadmap' ? (
-            <RoadmapView steps={generatedData.roadmap} />
-        ) : (
-            <DiagramView code={generatedData.mermaid_code} />
+            </motion.div>
+          </motion.div>
         )}
-        </motion.div>
-        </motion.div>
-      )}
+      </AnimatePresence>
     </div>
   );
 };
