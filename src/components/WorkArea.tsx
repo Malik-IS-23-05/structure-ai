@@ -3,7 +3,7 @@
 import { useStore } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ArrowRight, LayoutList, Network, Clock, Trash2, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // <--- 1. Добавили useEffect
 import { cn } from "@/lib/utils";
 import { RoadmapView } from "./RoadmapView";
 import { DiagramView } from "./DiagramView";
@@ -17,6 +17,13 @@ export const WorkArea = () => {
   } = useStore();
   
   const [input, setInput] = useState("");
+  
+  // 2. Добавляем состояние "смонтирован ли компонент"
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleGenerate = async () => {
     if (!input.trim()) return;
@@ -35,7 +42,7 @@ export const WorkArea = () => {
 
       const data = await response.json();
       setGeneratedData(data);
-      addToHistory(data); // <--- СОХРАНЯЕМ В ИСТОРИЮ
+      addToHistory(data);
       
     } catch (error) {
       console.error(error);
@@ -45,7 +52,6 @@ export const WorkArea = () => {
     }
   };
 
-  // Функция восстановления из истории
   const handleRestore = (item: typeof history[0]) => {
     setGeneratedData(item);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -54,7 +60,7 @@ export const WorkArea = () => {
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
       
-      {/* 1. Блок ввода */}
+      {/* Блок ввода */}
       <motion.div layout className="relative flex flex-col gap-4 w-full">
         <div className="relative w-full group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
@@ -87,8 +93,8 @@ export const WorkArea = () => {
           </div>
         </div>
 
-        {/* --- БЛОК ИСТОРИИ (Показываем, если нет генерации или просто снизу) --- */}
-        {!generatedData && history.length > 0 && (
+        {/* 3. Оборачиваем историю в проверку isMounted */}
+        {isMounted && !generatedData && history.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -134,7 +140,7 @@ export const WorkArea = () => {
         )}
       </motion.div>
 
-      {/* 2. Область результатов */}
+      {/* Область результатов */}
       <AnimatePresence mode="wait">
         {generatedData && (
           <motion.div
@@ -143,7 +149,6 @@ export const WorkArea = () => {
             exit={{ opacity: 0, y: -10 }}
             className="flex flex-col gap-6"
           >
-            {/* Заголовок и кнопка "Назад" (чтобы вернуться к истории) */}
             <div className="relative text-center">
               <button 
                 onClick={() => setGeneratedData(null)}
@@ -158,7 +163,6 @@ export const WorkArea = () => {
               </h2>
             </div>
 
-            {/* Тумблер */}
             <div className="flex p-1 bg-muted rounded-xl self-center relative">
               <button
                 onClick={() => setViewMode('roadmap')}
@@ -199,7 +203,6 @@ export const WorkArea = () => {
               </button>
             </div>
 
-            {/* Контент */}
             <motion.div
               key={viewMode}
               initial={{ opacity: 0, x: viewMode === 'roadmap' ? -20 : 20 }}
