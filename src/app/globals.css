@@ -2,21 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* === СВЕТЛАЯ ТЕМА (Light Mode) === */
+    --background: #ffffff;       /* Чисто белый фон */
+    --foreground: #0f172a;       /* Темно-синий текст (почти черный) */
+    
+    /* Цвета для рамок и карточек в светлой теме */
+    --card: #f8fafc;             /* Очень светло-серый для блоков */
+    --border: #e2e8f0;           /* Светлая граница */
+    --muted: #f1f5f9;            /* Фон для кнопок/табов */
+    --muted-foreground: #64748b; /* Серый текст */
+  }
+
+  .dark {
+    /* === ТЕМНАЯ ТЕМА (Dark Mode) === */
+    --background: #020617;       /* Глубокий темный фон */
+    --foreground: #f8fafc;       /* Белый текст */
+    
+    /* Цвета для рамок и карточек в темной теме */
+    --card: #0f172a;             /* Темно-синий для блоков */
+    --border: #1e293b;           /* Темная граница */
+    --muted: #1e293b;            /* Фон для кнопок/табов */
+    --muted-foreground: #94a3b8; /* Серый текст */
   }
 }
 
 body {
-  color: var(--foreground);
+  /* Применяем переменные */
   background: var(--background);
+  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   overflow-x: hidden;
+  
+  /* ✨ МАГИЯ: Плавный переход цвета за 0.3 секунды */
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* Стили скроллбара */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #525252;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #737373;
 }

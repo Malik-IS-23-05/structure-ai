@@ -109,31 +109,46 @@ const handleGenerate = async () => {
             Разбор темы: <span className="text-primary">{generatedData.topic}</span>
           </h2>
 
-          {/* Табы */}
-          <div className="flex p-1 bg-muted/50 rounded-xl self-center">
+          {/* Красивый Тумблер (Segmented Control) */}
+          <div className="flex p-1 bg-muted rounded-xl self-center relative">
+            {/* Кнопка Дорожная карта */}
             <button
               onClick={() => setViewMode('roadmap')}
               className={cn(
-                "flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-medium transition-all",
-                viewMode === 'roadmap' 
-                  ? "bg-background shadow-sm text-foreground" 
-                  : "text-muted-foreground hover:text-foreground"
+                "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
+                viewMode === 'roadmap' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <LayoutList size={18} />
-              Дорожная карта
+              <span>Дорожная карта</span>
+              {viewMode === 'roadmap' && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-background rounded-lg shadow-sm"
+                  style={{ zIndex: -1 }}
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
             </button>
+
+            {/* Кнопка Схема */}
             <button
               onClick={() => setViewMode('diagram')}
               className={cn(
-                "flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-medium transition-all",
-                viewMode === 'diagram' 
-                  ? "bg-background shadow-sm text-foreground" 
-                  : "text-muted-foreground hover:text-foreground"
+                "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
+                viewMode === 'diagram' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Network size={18} />
-              Схема
+              <span>Схема</span>
+              {viewMode === 'diagram' && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-background rounded-lg shadow-sm"
+                  style={{ zIndex: -1 }}
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
             </button>
           </div>
 

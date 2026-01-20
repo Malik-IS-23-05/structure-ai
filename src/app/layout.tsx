@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css"; // <--- Самая важная строка! Она подключает Tailwind
+import "./globals.css";
+import { ThemeProvider } from "@/components/ThemeProvider"; // <--- Импорт
 
-// Настраиваем шрифт Inter с поддержкой кириллицы
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
 export const metadata: Metadata = {
@@ -16,9 +16,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru">
+    // suppressHydrationWarning важен для темной темы!
+    <html lang="ru" suppressHydrationWarning>
       <body className={inter.className}>
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

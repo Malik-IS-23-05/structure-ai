@@ -16,13 +16,19 @@ const config: Config = {
     extend: {
       // 3. COLORS: Добавляем твои кастомные цвета
       colors: {
-        background: "var(--background)", // Берет цвет из globals.css
-        foreground: "var(--foreground)", // Берет цвет из globals.css
-        // Твой фирменный фиолетовый цвет
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        border: "var(--border)",       // <--- Добавили
+        muted: {                       // <--- Добавили
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        card: "var(--card)",           // <--- Добавили
+        
         primary: {
-          DEFAULT: "#8b5cf6", // Класс: bg-primary или text-primary
-          hover: "#7c3aed",   // Класс: hover:bg-primary-hover
-          foreground: "#ffffff" // Цвет текста на фиолетовом фоне
+          DEFAULT: "#8b5cf6",
+          hover: "#7c3aed",
+          foreground: "#ffffff"
         }
       },
     },
