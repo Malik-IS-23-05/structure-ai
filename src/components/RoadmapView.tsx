@@ -2,7 +2,7 @@
 
 import { RoadmapStep, GeneratedData } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Circle, ExternalLink, ZoomIn, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, ZoomIn, ChevronUp, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ interface RoadmapViewProps {
   onDeepDiveFetch?: (stepTitle: string, parentTopic: string) => Promise<GeneratedData | null>;
 }
 
-// === ПОД-КОМПОНЕНТ: ОДИН ШАГ (С ЛОГИКОЙ РАСКРЫТИЯ) ===
+// === ПОД-КОМПОНЕНТ: ОДИН ШАГ ===
 const RoadmapItem = ({ 
   step, 
   index, 
@@ -26,26 +26,23 @@ const RoadmapItem = ({
   onDeepDiveFetch?: (s: string, p: string) => Promise<GeneratedData | null>;
 }) => {
   const [isCompleted, setIsCompleted] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false); // Открыт ли Deep Dive
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [subData, setSubData] = useState<GeneratedData | null>(null); // Данные под-карты
+  const [subData, setSubData] = useState<GeneratedData | null>(null);
 
   const handleDeepDiveClick = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Чтобы не кликать чекбокс
+    e.stopPropagation();
     
-    // 1. Если уже открыто — просто закрываем (сворачиваем)
     if (isExpanded) {
       setIsExpanded(false);
       return;
     }
 
-    // 2. Если данные уже загружены раньше — просто показываем
     if (subData) {
       setIsExpanded(true);
       return;
     }
 
-    // 3. Иначе — загружаем
     if (!onDeepDiveFetch) return;
 
     setIsLoading(true);
@@ -72,11 +69,11 @@ const RoadmapItem = ({
       {/* Линия связи (вертикальная) */}
       <div className="absolute left-[0px] sm:left-[0px] top-6 bottom-[-2rem] w-px bg-border -z-10 last:hidden" />
 
-      {/* Кружок чекбокса */}
+      {/* Кружок чекбокса (ВЫРОВНЯЛИ ПО ЦЕНТРУ) */}
       <button
         onClick={() => setIsCompleted(!isCompleted)}
         className={cn(
-          "absolute -left-[9px] sm:-left-[11px] top-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full border-2 transition-all flex items-center justify-center bg-background z-10",
+          "absolute -left-[10px] sm:-left-[12px] top-1 h-5 w-5 sm:h-6 sm:w-6 rounded-full border-2 transition-all flex items-center justify-center bg-background z-10",
           isCompleted ? "border-primary bg-primary text-white" : "border-muted-foreground/40 text-transparent"
         )}
       >
@@ -105,7 +102,6 @@ const RoadmapItem = ({
               {step.step}. {step.title}
             </h3>
             
-            {/* Кнопка Deep Dive */}
             {onDeepDiveFetch && (
               <button
                 onClick={handleDeepDiveClick}
@@ -137,7 +133,6 @@ const RoadmapItem = ({
             {step.description}
           </p>
 
-          {/* Ресурсы */}
           {step.resources && step.resources.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {step.resources.map((res, i) => (
@@ -171,7 +166,6 @@ const RoadmapItem = ({
                    Углубление: {subData.topic}
                 </div>
                 
-                {/* 🔥 РЕКУРСИЯ! Вызываем RoadmapView внутри RoadmapView */}
                 <RoadmapView 
                   steps={subData.roadmap} 
                   parentTopic={subData.topic}

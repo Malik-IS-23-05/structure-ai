@@ -222,11 +222,20 @@ export const WorkArea = () => {
             exit={{ opacity: 0, y: -10 }}
             className="w-full max-w-4xl mx-auto flex flex-col gap-6"
           >
-            <div className="relative text-center">
-              <button onClick={() => setGeneratedData(null)} className="absolute left-0 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-colors md:flex hidden">
-                <ArrowRight className="rotate-180" size={20} />
+            <div className="relative flex items-center justify-center min-h-[3rem]">
+              {/* Кнопка "Назад" */}
+              <button 
+                onClick={() => setGeneratedData(null)} 
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
+                title="Вернуться к поиску"
+              >
+                <ArrowRight className="rotate-180" size={24} />
               </button>
-              <h2 className="text-3xl font-bold">Разбор темы: <span className="text-primary">{generatedData.topic}</span></h2>
+              
+              {/* Заголовок с отступами, чтобы не наезжал на кнопку */}
+              <h2 className="text-2xl sm:text-3xl font-bold px-12 sm:px-16 leading-tight break-words text-center">
+                Разбор темы: <span className="text-primary">{generatedData.topic}</span>
+              </h2>
             </div>
 
             <div className="flex p-1 bg-muted rounded-xl self-center relative">
