@@ -10,7 +10,6 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { RoadmapView } from "./RoadmapView";
 import { DiagramView } from "./DiagramView";
-import { Modal } from "./Modal"; // <--- Импортируем модалку
 
 const MODELS = [
   { id: 'universal', name: 'Универсальный', icon: Sparkles, color: 'text-yellow-500' },
@@ -38,11 +37,6 @@ export const WorkArea = () => {
   const [input, setInput] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [selectedModel, setSelectedModel] = useState('universal');
-
-  // --- СОСТОЯНИЯ ДЛЯ DEEP DIVE ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
-  const [deepDiveData, setDeepDiveData] = useState<GeneratedData | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -79,15 +73,9 @@ export const WorkArea = () => {
     }
   };
 
-  // 🔥 ЛОГИКА DEEP DIVE
-  const handleDeepDive = async (stepTitle: string) => {
-    if (!generatedData) return;
-    
-    setIsModalOpen(true);
-    setDeepDiveData(null);
-    setDeepDiveLoading(true);
-
-    const deepDiveTopic = `Подробный разбор шага "${stepTitle}" в контексте темы "${generatedData.topic}"`;
+  // 🔥 НОВАЯ ФУНКЦИЯ FETCH (просто возвращает данные, не меняя стейт UI)
+  const handleDeepDiveFetch = async (stepTitle: string, parentTopic: string): Promise<GeneratedData | null> => {
+    const deepDiveTopic = `Подробный разбор шага "${stepTitle}" в контексте темы "${parentTopic}"`;
 
     try {
       const response = await fetch("/api/generate", {
@@ -100,15 +88,11 @@ export const WorkArea = () => {
       });
 
       if (!response.ok) throw new Error("Ошибка Deep Dive");
-
-      const data = await response.json();
-      setDeepDiveData(data); // Данные для модалки
+      return await response.json(); // Возвращаем данные компоненту RoadmapView
     } catch (error) {
       console.error(error);
       alert("Не удалось углубиться в тему.");
-      setIsModalOpen(false); // Закрываем при ошибке
-    } finally {
-      setDeepDiveLoading(false);
+      return null;
     }
   };
 
@@ -120,36 +104,7 @@ export const WorkArea = () => {
   return (
     <div className="w-full mx-auto flex flex-col gap-8">
       
-      {/* --- МОДАЛКА DEEP DIVE --- */}
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        title={deepDiveData ? deepDiveData.topic : "Углубляемся в тему..."}
-      >
-        {deepDiveLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="animate-spin h-10 w-10 border-4 border-primary/30 border-t-primary rounded-full" />
-            <p className="text-muted-foreground animate-pulse">ИИ анализирует детали...</p>
-          </div>
-        ) : deepDiveData ? (
-          <div className="space-y-6">
-             {/* В модалке показываем только Roadmap (без схемы, чтобы не перегружать) */}
-             {/* Но при желании можно добавить и схему */}
-             <RoadmapView 
-               steps={deepDiveData.roadmap} 
-               // Важно: мы НЕ передаем onDeepDive сюда, чтобы избежать бесконечной вложенности (пока)
-             />
-             
-             {/* Если хочешь схему и в модалке - раскомментируй это: */}
-             {/* <div className="mt-8 border-t pt-8">
-               <h3 className="text-lg font-bold mb-4">Структурная схема</h3>
-               <DiagramView code={deepDiveData.mermaid_code} />
-             </div> */}
-          </div>
-        ) : null}
-      </Modal>
-
-      {/* БЛОК ПОИСКА (max-w-2xl) */}
+      {/* БЛОК ПОИСКА */}
       <motion.div layout className="w-full max-w-2xl mx-auto flex flex-col gap-4">
         {!generatedData && (
           <motion.div 
@@ -259,7 +214,7 @@ export const WorkArea = () => {
         )}
       </motion.div>
 
-      {/* БЛОК РЕЗУЛЬТАТОВ (max-w-4xl) */}
+      {/* БЛОК РЕЗУЛЬТАТОВ */}
       <AnimatePresence mode="wait">
         {generatedData && (
           <motion.div
@@ -294,10 +249,11 @@ export const WorkArea = () => {
               className="bg-card rounded-2xl p-1 sm:p-4 border border-border"
             >
               {viewMode === 'roadmap' ? (
-                // 🔥 ПЕРЕДАЕМ handleDeepDive В ДОРОЖНУЮ КАРТУ
+                // Передаем топик и функцию fetch
                 <RoadmapView 
                   steps={generatedData.roadmap} 
-                  onDeepDive={handleDeepDive} 
+                  parentTopic={generatedData.topic} 
+                  onDeepDiveFetch={handleDeepDiveFetch} 
                 />
               ) : (
                 <DiagramView code={generatedData.mermaid_code} />
