@@ -10,8 +10,8 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { RoadmapView } from "./RoadmapView";
 import { DiagramView } from "./DiagramView";
+import { Modal } from "./Modal"; // <--- Импортируем модалку
 
-// --- КОНФИГУРАЦИЯ МОДЕЛЕЙ ---
 const MODELS = [
   { id: 'universal', name: 'Универсальный', icon: Sparkles, color: 'text-yellow-500' },
   { id: 'dev', name: 'Программист', icon: Code, color: 'text-blue-500' },
@@ -19,12 +19,12 @@ const MODELS = [
   { id: 'creative', name: 'Креатив', icon: Palette, color: 'text-pink-500' },
 ];
 
-// --- СТОКОВЫЕ ЗАПРОСЫ ---
 const SUGGESTIONS = [
   "Python с нуля",
   "История Рима",
   "Как работает Blockchain",
-  "Основы Маркетинга"
+  "Основы Маркетинга",
+  "Микросервисы"
 ];
 
 export const WorkArea = () => {
@@ -39,6 +39,11 @@ export const WorkArea = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [selectedModel, setSelectedModel] = useState('universal');
 
+  // --- СОСТОЯНИЯ ДЛЯ DEEP DIVE ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+  const [deepDiveData, setDeepDiveData] = useState<GeneratedData | null>(null);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -46,7 +51,6 @@ export const WorkArea = () => {
   const handleGenerate = async (queryOverride?: string) => {
     const query = queryOverride || input;
     if (!query.trim()) return;
-
     if (queryOverride) setInput(queryOverride);
 
     setIsLoading(true);
@@ -67,12 +71,44 @@ export const WorkArea = () => {
       const data = await response.json();
       setGeneratedData(data);
       addToHistory(data);
-      
     } catch (error) {
       console.error(error);
       alert("Что-то пошло не так. Попробуйте еще раз.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 🔥 ЛОГИКА DEEP DIVE
+  const handleDeepDive = async (stepTitle: string) => {
+    if (!generatedData) return;
+    
+    setIsModalOpen(true);
+    setDeepDiveData(null);
+    setDeepDiveLoading(true);
+
+    const deepDiveTopic = `Подробный разбор шага "${stepTitle}" в контексте темы "${generatedData.topic}"`;
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          topic: deepDiveTopic,
+          modelType: selectedModel
+        }),
+      });
+
+      if (!response.ok) throw new Error("Ошибка Deep Dive");
+
+      const data = await response.json();
+      setDeepDiveData(data); // Данные для модалки
+    } catch (error) {
+      console.error(error);
+      alert("Не удалось углубиться в тему.");
+      setIsModalOpen(false); // Закрываем при ошибке
+    } finally {
+      setDeepDiveLoading(false);
     }
   };
 
@@ -84,13 +120,37 @@ export const WorkArea = () => {
   return (
     <div className="w-full mx-auto flex flex-col gap-8">
       
-      {/* === БЛОК ПОИСКА (Узкий контейнер max-w-2xl) === */}
-      <motion.div 
-        layout 
-        className="w-full max-w-2xl mx-auto flex flex-col gap-4" // <--- СУЗИЛИ ЗДЕСЬ
+      {/* --- МОДАЛКА DEEP DIVE --- */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title={deepDiveData ? deepDiveData.topic : "Углубляемся в тему..."}
       >
-        
-        {/* 1. ВЫБОР МОДЕЛИ */}
+        {deepDiveLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="animate-spin h-10 w-10 border-4 border-primary/30 border-t-primary rounded-full" />
+            <p className="text-muted-foreground animate-pulse">ИИ анализирует детали...</p>
+          </div>
+        ) : deepDiveData ? (
+          <div className="space-y-6">
+             {/* В модалке показываем только Roadmap (без схемы, чтобы не перегружать) */}
+             {/* Но при желании можно добавить и схему */}
+             <RoadmapView 
+               steps={deepDiveData.roadmap} 
+               // Важно: мы НЕ передаем onDeepDive сюда, чтобы избежать бесконечной вложенности (пока)
+             />
+             
+             {/* Если хочешь схему и в модалке - раскомментируй это: */}
+             {/* <div className="mt-8 border-t pt-8">
+               <h3 className="text-lg font-bold mb-4">Структурная схема</h3>
+               <DiagramView code={deepDiveData.mermaid_code} />
+             </div> */}
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* БЛОК ПОИСКА (max-w-2xl) */}
+      <motion.div layout className="w-full max-w-2xl mx-auto flex flex-col gap-4">
         {!generatedData && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -119,12 +179,10 @@ export const WorkArea = () => {
           </motion.div>
         )}
 
-        {/* ПОЛЕ ВВОДА */}
         <div className="relative w-full group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
           <div className="relative flex items-center bg-background rounded-xl p-2 border border-border shadow-2xl">
             <Sparkles className="ml-3 text-primary animate-pulse" size={24} />
-            
             <input
               type="text"
               value={input}
@@ -133,7 +191,6 @@ export const WorkArea = () => {
               placeholder="Что хочешь изучить?"
               className="w-full bg-transparent border-none outline-none px-4 py-3 text-lg placeholder:text-muted-foreground/50"
             />
-
             <button
               onClick={() => handleGenerate()}
               disabled={isLoading || !input.trim()}
@@ -148,7 +205,6 @@ export const WorkArea = () => {
           </div>
         </div>
 
-        {/* 2. СТОКОВЫЕ ЗАПРОСЫ */}
         {!generatedData && !isLoading && input.length === 0 && (
           <motion.div 
             initial={{ opacity: 0 }}
@@ -167,7 +223,6 @@ export const WorkArea = () => {
           </motion.div>
         )}
 
-        {/* История (тоже внутри узкого контейнера) */}
         {isMounted && !generatedData && history.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -179,14 +234,10 @@ export const WorkArea = () => {
                 <Clock size={16} />
                 Недавние запросы
               </h3>
-              <button 
-                onClick={clearHistory}
-                className="text-xs text-red-500 hover:text-red-600 transition-colors flex items-center gap-1"
-              >
+              <button onClick={clearHistory} className="text-xs text-red-500 hover:text-red-600 transition-colors flex items-center gap-1">
                 <Trash2 size={12} /> Очистить
               </button>
             </div>
-            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {history.map((item, i) => (
                 <motion.div
@@ -198,13 +249,7 @@ export const WorkArea = () => {
                 >
                   <span className="font-medium truncate pr-2 text-sm">{item.topic}</span>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); removeFromHistory(item.topic); }}
-                      className="p-1 hover:bg-red-500/10 hover:text-red-500 rounded text-muted-foreground"
-                      title="Удалить"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); removeFromHistory(item.topic); }} className="p-1 hover:bg-red-500/10 hover:text-red-500 rounded text-muted-foreground"><Trash2 size={14} /></button>
                     <RotateCcw size={14} className="text-primary" />
                   </div>
                 </motion.div>
@@ -214,66 +259,30 @@ export const WorkArea = () => {
         )}
       </motion.div>
 
-      {/* === БЛОК РЕЗУЛЬТАТОВ (Широкий контейнер max-w-4xl) === */}
+      {/* БЛОК РЕЗУЛЬТАТОВ (max-w-4xl) */}
       <AnimatePresence mode="wait">
         {generatedData && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="w-full max-w-4xl mx-auto flex flex-col gap-6" // <--- ШИРОКИЙ ЗДЕСЬ
+            className="w-full max-w-4xl mx-auto flex flex-col gap-6"
           >
             <div className="relative text-center">
-              <button 
-                onClick={() => setGeneratedData(null)}
-                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-colors md:flex hidden"
-                title="Вернуться к поиску"
-              >
+              <button onClick={() => setGeneratedData(null)} className="absolute left-0 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-colors md:flex hidden">
                 <ArrowRight className="rotate-180" size={20} />
               </button>
-              
-              <h2 className="text-3xl font-bold">
-                Разбор темы: <span className="text-primary">{generatedData.topic}</span>
-              </h2>
+              <h2 className="text-3xl font-bold">Разбор темы: <span className="text-primary">{generatedData.topic}</span></h2>
             </div>
 
             <div className="flex p-1 bg-muted rounded-xl self-center relative">
-              <button
-                onClick={() => setViewMode('roadmap')}
-                className={cn(
-                  "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
-                  viewMode === 'roadmap' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <LayoutList size={18} />
-                <span>Дорожная карта</span>
-                {viewMode === 'roadmap' && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-background rounded-lg shadow-sm"
-                    style={{ zIndex: -1 }}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
+              <button onClick={() => setViewMode('roadmap')} className={cn("relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200", viewMode === 'roadmap' ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                <LayoutList size={18} /><span>Дорожная карта</span>
+                {viewMode === 'roadmap' && <motion.div layoutId="activeTab" className="absolute inset-0 bg-background rounded-lg shadow-sm" style={{ zIndex: -1 }} transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
               </button>
-
-              <button
-                onClick={() => setViewMode('diagram')}
-                className={cn(
-                  "relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200",
-                  viewMode === 'diagram' ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Network size={18} />
-                <span>Схема</span>
-                {viewMode === 'diagram' && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-background rounded-lg shadow-sm"
-                    style={{ zIndex: -1 }}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
+              <button onClick={() => setViewMode('diagram')} className={cn("relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200", viewMode === 'diagram' ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                <Network size={18} /><span>Схема</span>
+                {viewMode === 'diagram' && <motion.div layoutId="activeTab" className="absolute inset-0 bg-background rounded-lg shadow-sm" style={{ zIndex: -1 }} transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
               </button>
             </div>
 
@@ -285,7 +294,11 @@ export const WorkArea = () => {
               className="bg-card rounded-2xl p-1 sm:p-4 border border-border"
             >
               {viewMode === 'roadmap' ? (
-                <RoadmapView steps={generatedData.roadmap} />
+                // 🔥 ПЕРЕДАЕМ handleDeepDive В ДОРОЖНУЮ КАРТУ
+                <RoadmapView 
+                  steps={generatedData.roadmap} 
+                  onDeepDive={handleDeepDive} 
+                />
               ) : (
                 <DiagramView code={generatedData.mermaid_code} />
               )}

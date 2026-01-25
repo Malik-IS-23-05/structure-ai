@@ -2,16 +2,16 @@
 
 import { RoadmapStep } from "@/store/useStore";
 import { motion } from "framer-motion";
-import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, ZoomIn } from "lucide-react"; // <--- Добавили ZoomIn
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface RoadmapViewProps {
   steps: RoadmapStep[];
+  onDeepDive?: (stepTitle: string) => void; // <--- Новый проп для Deep Dive
 }
 
-export const RoadmapView = ({ steps }: RoadmapViewProps) => {
-  // Храним состояние чекбоксов (ID выполненных шагов)
+export const RoadmapView = ({ steps, onDeepDive }: RoadmapViewProps) => {
   const [completed, setCompleted] = useState<number[]>([]);
 
   const toggleStep = (stepId: number) => {
@@ -32,10 +32,10 @@ export const RoadmapView = ({ steps }: RoadmapViewProps) => {
             key={step.step}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.1 }} // Каскадная анимация
+            transition={{ delay: index * 0.1 }}
             className="relative pl-8 sm:pl-12"
           >
-            {/* Кружок на линии */}
+            {/* Кружок чекбокса */}
             <button
               onClick={() => toggleStep(step.step)}
               className={cn(
@@ -46,27 +46,42 @@ export const RoadmapView = ({ steps }: RoadmapViewProps) => {
               {isDone ? <CheckCircle2 size={14} /> : <Circle size={14} />}
             </button>
 
-            {/* Карточка контента */}
+            {/* Карточка */}
             <div 
-              onClick={() => toggleStep(step.step)}
+              // Убрали onClick c дива, чтобы не путать клики
               className={cn(
-                "group rounded-xl border p-4 sm:p-5 transition-all cursor-pointer hover:shadow-md",
+                "group rounded-xl border p-4 sm:p-5 transition-all hover:shadow-md relative overflow-hidden",
                 isDone 
                   ? "bg-primary/5 border-primary/20 opacity-70" 
                   : "bg-card border-border hover:border-primary/50"
               )}
             >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className={cn("font-bold text-lg", isDone && "line-through text-muted-foreground")}>
+              <div className="flex items-start justify-between mb-2 gap-4">
+                <h3 
+                    onClick={() => toggleStep(step.step)}
+                    className={cn("font-bold text-lg cursor-pointer hover:text-primary transition-colors", isDone && "line-through text-muted-foreground")}
+                >
                   {step.step}. {step.title}
                 </h3>
+                
+                {/* 🔥 КНОПКА DEEP DIVE (Показываем, если передана функция) */}
+                {onDeepDive && (
+                  <button
+                    onClick={() => onDeepDive(step.title)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors whitespace-nowrap"
+                    title="Сгенерировать подробный план для этого шага"
+                  >
+                    <ZoomIn size={14} />
+                    <span className="hidden sm:inline">Подробнее</span>
+                  </button>
+                )}
               </div>
               
-              <p className="text-muted-foreground mb-4 leading-relaxed">
+              <p className="text-muted-foreground mb-4 leading-relaxed text-sm sm:text-base">
                 {step.description}
               </p>
 
-              {/* Ресурсы (теги) */}
+              {/* Ресурсы */}
               {step.resources && step.resources.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {step.resources.map((res, i) => (
@@ -75,8 +90,7 @@ export const RoadmapView = ({ steps }: RoadmapViewProps) => {
                       href={`https://www.google.com/search?q=${encodeURIComponent(res)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()} // Чтобы клик не переключал чекбокс
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-accent/50 text-xs font-medium text-accent-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-muted text-xs font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors border border-transparent hover:border-primary/20"
                     >
                       {res}
                       <ExternalLink size={10} />
