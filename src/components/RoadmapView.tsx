@@ -46,16 +46,15 @@ const RoadmapItem = ({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="relative pl-8 sm:pl-12"
+      // 🔥 УВЕЛИЧИЛ ОТСТУП СЛЕВА: pl-8 -> pl-6, чтобы компенсировать сдвиг родителя
+      className="relative pl-6 sm:pl-12"
     >
-      {/* ИСПРАВЛЕННАЯ ЛИНИЯ СВЯЗИ:
-         1. w-0.5 (2px) — чтобы была видна.
-         2. top-3 — начинается от центра кружка (кружок top-1 высотой 20px, центр ~11px).
-         3. bottom-[-1.5rem] — тянется до следующего кружка.
-      */}
-      <div className="absolute left-[0px] sm:left-[0px] top-3 bottom-[-1.5rem] w-0.5 bg-border -z-10 last:hidden" />
+      {/* ЛИНИЯ */}
+      {/* Убрал -z-10, чтобы она точно была видна */}
+      <div className="absolute left-[0px] top-3 bottom-[-1.5rem] w-0.5 bg-border last:hidden" />
 
-      {/* Кружок чекбокса */}
+      {/* КРУЖОК */}
+      {/* left-[-10px] центрирует кружок шириной 20px на линии шириной 2px */}
       <button
         onClick={() => setIsCompleted(!isCompleted)}
         className={cn(
@@ -66,7 +65,7 @@ const RoadmapItem = ({
         {isCompleted ? <CheckCircle2 size={14} /> : <Circle size={14} />}
       </button>
 
-      {/* Карточка */}
+      {/* КАРТОЧКА */}
       <div 
         className={cn(
           "group rounded-xl border transition-all duration-300 relative overflow-hidden",
@@ -151,8 +150,9 @@ const RoadmapItem = ({
 
 export const RoadmapView = ({ steps, parentTopic = "", onDeepDiveFetch }: RoadmapViewProps) => {
   return (
-    // УБРАЛ border-l-2 у этого контейнера. Теперь только локальные линии внутри RoadmapItem.
-    <div className="relative ml-2 sm:ml-6 space-y-6 py-4">
+    // 🔥 ФИНАЛЬНЫЙ ФИКС: ml-6 (24px) вместо ml-2 (8px). 
+    // Это дает достаточно места слева, чтобы кружок (-10px) не обрезался экраном.
+    <div className="relative ml-6 sm:ml-6 space-y-6 py-4">
       {steps.map((step, index) => (
         <RoadmapItem 
           key={step.step} 

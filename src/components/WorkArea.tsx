@@ -222,20 +222,26 @@ export const WorkArea = () => {
             exit={{ opacity: 0, y: -10 }}
             className="w-full max-w-4xl mx-auto flex flex-col gap-6"
           >
-            <div className="relative flex items-center justify-center min-h-[3rem]">
-              {/* Кнопка "Назад" */}
+{/* ШАПКА РЕЗУЛЬТАТОВ (Grid Layout) */}
+            <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4 min-h-[3rem]">
+              
+              {/* Кнопка "Назад" - Всегда слева */}
               <button 
                 onClick={() => setGeneratedData(null)} 
-                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-colors hidden md:flex"
+                className="p-2 hover:bg-accent rounded-full text-muted-foreground hover:text-foreground transition-colors"
                 title="Вернуться к поиску"
               >
                 <ArrowRight className="rotate-180" size={24} />
               </button>
               
-              {/* Заголовок с отступами, чтобы не наезжал на кнопку */}
-              <h2 className="text-2xl sm:text-3xl font-bold px-12 sm:px-16 leading-tight break-words text-center">
-                Разбор темы: <span className="text-primary">{generatedData.topic}</span>
+              {/* Заголовок - Всегда по центру */}
+              <h2 className="text-2xl sm:text-3xl font-bold leading-tight break-words text-center">
+                Разбор темы: <br className="sm:hidden" /> 
+                <span className="text-primary">{generatedData.topic}</span>
               </h2>
+
+              {/* Пустой блок справа для баланса (чтобы заголовок был ровно по центру) */}
+              <div className="w-10" /> 
             </div>
 
             <div className="flex p-1 bg-muted rounded-xl self-center relative">
