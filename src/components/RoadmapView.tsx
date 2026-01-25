@@ -6,14 +6,12 @@ import { CheckCircle2, Circle, ExternalLink, ZoomIn, ChevronUp, Loader2 } from "
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-// --- Props ---
 interface RoadmapViewProps {
   steps: RoadmapStep[];
-  parentTopic?: string; // Тема родителя (для контекста запроса)
+  parentTopic?: string;
   onDeepDiveFetch?: (stepTitle: string, parentTopic: string) => Promise<GeneratedData | null>;
 }
 
-// === ПОД-КОМПОНЕНТ: ОДИН ШАГ ===
 const RoadmapItem = ({ 
   step, 
   index, 
@@ -32,31 +30,15 @@ const RoadmapItem = ({
 
   const handleDeepDiveClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    if (isExpanded) {
-      setIsExpanded(false);
-      return;
-    }
-
-    if (subData) {
-      setIsExpanded(true);
-      return;
-    }
-
+    if (isExpanded) { setIsExpanded(false); return; }
+    if (subData) { setIsExpanded(true); return; }
     if (!onDeepDiveFetch) return;
 
     setIsLoading(true);
     try {
       const data = await onDeepDiveFetch(step.title, parentTopic);
-      if (data) {
-        setSubData(data);
-        setIsExpanded(true);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+      if (data) { setSubData(data); setIsExpanded(true); }
+    } catch (err) { console.error(err); } finally { setIsLoading(false); }
   };
 
   return (
@@ -66,10 +48,14 @@ const RoadmapItem = ({
       transition={{ delay: index * 0.05 }}
       className="relative pl-8 sm:pl-12"
     >
-      {/* Линия связи (вертикальная) */}
-      <div className="absolute left-[0px] sm:left-[0px] top-6 bottom-[-2rem] w-px bg-border -z-10 last:hidden" />
+      {/* ИСПРАВЛЕННАЯ ЛИНИЯ СВЯЗИ:
+         1. w-0.5 (2px) — чтобы была видна.
+         2. top-3 — начинается от центра кружка (кружок top-1 высотой 20px, центр ~11px).
+         3. bottom-[-1.5rem] — тянется до следующего кружка.
+      */}
+      <div className="absolute left-[0px] sm:left-[0px] top-3 bottom-[-1.5rem] w-0.5 bg-border -z-10 last:hidden" />
 
-      {/* Кружок чекбокса (ВЫРОВНЯЛИ ПО ЦЕНТРУ) */}
+      {/* Кружок чекбокса */}
       <button
         onClick={() => setIsCompleted(!isCompleted)}
         className={cn(
@@ -108,23 +94,13 @@ const RoadmapItem = ({
                 disabled={isLoading}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
-                  isExpanded 
-                    ? "bg-primary text-white" 
-                    : "bg-primary/10 text-primary hover:bg-primary/20"
+                  isExpanded ? "bg-primary text-white" : "bg-primary/10 text-primary hover:bg-primary/20"
                 )}
-                title="Подробнее"
               >
-                {isLoading ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : isExpanded ? (
-                  <>
-                    <ChevronUp size={14} /> Свернуть
-                  </>
-                ) : (
-                  <>
-                    <ZoomIn size={14} /> Подробнее
-                  </>
-                )}
+                {isLoading ? <Loader2 size={14} className="animate-spin" /> : (isExpanded ? <ChevronUp size={14} /> : <ZoomIn size={14} />)}
+                <span className={cn(isLoading || isExpanded ? "inline" : "hidden sm:inline")}>
+                  {isLoading ? "" : isExpanded ? "Свернуть" : "Подробнее"}
+                </span>
               </button>
             )}
           </div>
@@ -143,15 +119,13 @@ const RoadmapItem = ({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-muted text-xs font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors border border-transparent hover:border-primary/20"
                 >
-                  {res}
-                  <ExternalLink size={10} />
+                  {res} <ExternalLink size={10} />
                 </a>
               ))}
             </div>
           )}
         </div>
 
-        {/* --- ВЛОЖЕННЫЙ КОНТЕНТ (DEEP DIVE) --- */}
         <AnimatePresence>
           {isExpanded && subData && (
             <motion.div
@@ -165,12 +139,7 @@ const RoadmapItem = ({
                    <div className="w-1 h-4 bg-primary rounded-full" />
                    Углубление: {subData.topic}
                 </div>
-                
-                <RoadmapView 
-                  steps={subData.roadmap} 
-                  parentTopic={subData.topic}
-                  onDeepDiveFetch={onDeepDiveFetch} 
-                />
+                <RoadmapView steps={subData.roadmap} parentTopic={subData.topic} onDeepDiveFetch={onDeepDiveFetch} />
               </div>
             </motion.div>
           )}
@@ -180,10 +149,10 @@ const RoadmapItem = ({
   );
 };
 
-// === ОСНОВНОЙ КОМПОНЕНТ ===
 export const RoadmapView = ({ steps, parentTopic = "", onDeepDiveFetch }: RoadmapViewProps) => {
   return (
-    <div className="relative border-l-2 border-border ml-4 sm:ml-6 space-y-6 py-4">
+    // УБРАЛ border-l-2 у этого контейнера. Теперь только локальные линии внутри RoadmapItem.
+    <div className="relative ml-2 sm:ml-6 space-y-6 py-4">
       {steps.map((step, index) => (
         <RoadmapItem 
           key={step.step} 
