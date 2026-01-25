@@ -1,12 +1,31 @@
 "use client";
 
-import { useStore } from "@/store/useStore";
+import { useStore, GeneratedData } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ArrowRight, LayoutList, Network, Clock, Trash2, RotateCcw } from "lucide-react";
-import { useState, useEffect } from "react"; // <--- 1. Добавили useEffect
+import { 
+  Sparkles, ArrowRight, LayoutList, Network, Clock, 
+  Trash2, RotateCcw, Code, GraduationCap, Palette
+} from "lucide-react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { RoadmapView } from "./RoadmapView";
 import { DiagramView } from "./DiagramView";
+
+// --- КОНФИГУРАЦИЯ МОДЕЛЕЙ ---
+const MODELS = [
+  { id: 'universal', name: 'Универсальный', icon: Sparkles, color: 'text-yellow-500' },
+  { id: 'dev', name: 'Программист', icon: Code, color: 'text-blue-500' },
+  { id: 'academic', name: 'Академик', icon: GraduationCap, color: 'text-green-500' },
+  { id: 'creative', name: 'Креатив', icon: Palette, color: 'text-pink-500' },
+];
+
+// --- СТОКОВЫЕ ЗАПРОСЫ ---
+const SUGGESTIONS = [
+  "Python с нуля",
+  "История Рима",
+  "Как работает Blockchain",
+  "Основы Маркетинга"
+];
 
 export const WorkArea = () => {
   const { 
@@ -17,16 +36,18 @@ export const WorkArea = () => {
   } = useStore();
   
   const [input, setInput] = useState("");
-  
-  // 2. Добавляем состояние "смонтирован ли компонент"
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('universal');
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const handleGenerate = async () => {
-    if (!input.trim()) return;
+  const handleGenerate = async (queryOverride?: string) => {
+    const query = queryOverride || input;
+    if (!query.trim()) return;
+
+    if (queryOverride) setInput(queryOverride);
 
     setIsLoading(true);
     setGeneratedData(null); 
@@ -35,7 +56,10 @@ export const WorkArea = () => {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: input }),
+        body: JSON.stringify({ 
+          topic: query,
+          modelType: selectedModel
+        }),
       });
 
       if (!response.ok) throw new Error("Ошибка генерации");
@@ -52,16 +76,50 @@ export const WorkArea = () => {
     }
   };
 
-  const handleRestore = (item: typeof history[0]) => {
+  const handleRestore = (item: GeneratedData) => {
     setGeneratedData(item);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
+    <div className="w-full mx-auto flex flex-col gap-8">
       
-      {/* Блок ввода */}
-      <motion.div layout className="relative flex flex-col gap-4 w-full">
+      {/* === БЛОК ПОИСКА (Узкий контейнер max-w-2xl) === */}
+      <motion.div 
+        layout 
+        className="w-full max-w-2xl mx-auto flex flex-col gap-4" // <--- СУЗИЛИ ЗДЕСЬ
+      >
+        
+        {/* 1. ВЫБОР МОДЕЛИ */}
+        {!generatedData && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-wrap justify-center gap-2 mb-1"
+          >
+            {MODELS.map((model) => {
+              const Icon = model.icon;
+              const isSelected = selectedModel === model.id;
+              return (
+                <button
+                  key={model.id}
+                  onClick={() => setSelectedModel(model.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border",
+                    isSelected 
+                      ? "bg-primary/10 border-primary text-primary shadow-sm" 
+                      : "bg-card border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <Icon size={16} className={cn(isSelected ? "text-primary" : model.color)} />
+                  {model.name}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+
+        {/* ПОЛЕ ВВОДА */}
         <div className="relative w-full group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200" />
           <div className="relative flex items-center bg-background rounded-xl p-2 border border-border shadow-2xl">
@@ -72,35 +130,51 @@ export const WorkArea = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-              placeholder="Что хочешь изучить? (например: 'Архитектура React', 'История Рима')"
+              placeholder="Что хочешь изучить?"
               className="w-full bg-transparent border-none outline-none px-4 py-3 text-lg placeholder:text-muted-foreground/50"
             />
 
             <button
-              onClick={handleGenerate}
+              onClick={() => handleGenerate()}
               disabled={isLoading || !input.trim()}
-              className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-primary hover:bg-primary/90 text-white px-4 sm:px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isLoading ? (
                 <span className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full" />
               ) : (
-                <>
-                  <span className="hidden sm:inline">Сгенерировать</span>
-                  <ArrowRight size={20} />
-                </>
+                <ArrowRight size={20} />
               )}
             </button>
           </div>
         </div>
 
-        {/* 3. Оборачиваем историю в проверку isMounted */}
+        {/* 2. СТОКОВЫЕ ЗАПРОСЫ */}
+        {!generatedData && !isLoading && input.length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-wrap justify-center gap-2 mt-1"
+          >
+            {SUGGESTIONS.map((suggestion, i) => (
+              <button
+                key={i}
+                onClick={() => handleGenerate(suggestion)}
+                className="px-3 py-1.5 text-xs sm:text-sm bg-muted/50 hover:bg-primary/10 hover:text-primary text-muted-foreground rounded-lg transition-colors border border-transparent hover:border-primary/20"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </motion.div>
+        )}
+
+        {/* История (тоже внутри узкого контейнера) */}
         {isMounted && !generatedData && history.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-8"
+            className="mt-6 border-t border-border/50 pt-6"
           >
-            <div className="flex items-center justify-between mb-4 px-2">
+            <div className="flex items-center justify-between mb-4 px-1">
               <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                 <Clock size={16} />
                 Недавние запросы
@@ -119,10 +193,10 @@ export const WorkArea = () => {
                   key={item.topic + i}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="group flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/50 cursor-pointer transition-all"
+                  className="group flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/50 cursor-pointer transition-all shadow-sm"
                   onClick={() => handleRestore(item)}
                 >
-                  <span className="font-medium truncate pr-2">{item.topic}</span>
+                  <span className="font-medium truncate pr-2 text-sm">{item.topic}</span>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={(e) => { e.stopPropagation(); removeFromHistory(item.topic); }}
@@ -140,14 +214,14 @@ export const WorkArea = () => {
         )}
       </motion.div>
 
-      {/* Область результатов */}
+      {/* === БЛОК РЕЗУЛЬТАТОВ (Широкий контейнер max-w-4xl) === */}
       <AnimatePresence mode="wait">
         {generatedData && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex flex-col gap-6"
+            className="w-full max-w-4xl mx-auto flex flex-col gap-6" // <--- ШИРОКИЙ ЗДЕСЬ
           >
             <div className="relative text-center">
               <button 
