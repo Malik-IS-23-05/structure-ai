@@ -22,8 +22,7 @@ const SUGGESTIONS = [
   "Python с нуля",
   "История Рима",
   "Как работает Blockchain",
-  "Основы Маркетинга",
-  "Микросервисы"
+  "Основы Маркетинга"
 ];
 
 export const WorkArea = () => {
