@@ -231,7 +231,7 @@ export const WorkArea = () => {
 
             <div className="flex p-1 bg-muted rounded-xl self-center relative">
               <button onClick={() => setViewMode('roadmap')} className={cn("relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200", viewMode === 'roadmap' ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                <LayoutList size={18} /><span>Дорожная карта</span>
+                <LayoutList size={18} /><span>План</span>
                 {viewMode === 'roadmap' && <motion.div layoutId="activeTab" className="absolute inset-0 bg-background rounded-lg shadow-sm" style={{ zIndex: -1 }} transition={{ type: "spring", bounce: 0.2, duration: 0.6 }} />}
               </button>
               <button onClick={() => setViewMode('diagram')} className={cn("relative z-10 flex items-center gap-2 px-6 py-2 text-sm font-medium transition-colors duration-200", viewMode === 'diagram' ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
